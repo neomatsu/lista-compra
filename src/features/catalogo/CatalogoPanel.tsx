@@ -127,15 +127,17 @@ export function CatalogoPanel({
 
         <div className="border-t-2 border-slate-300 pt-3">
           <p className="mb-2 font-semibold text-slate-900">Producto personalizado</p>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <input
               type="text"
               value={customName}
               onChange={(e) => setCustomName(e.target.value)}
               placeholder="Escribe un producto"
-              className="min-h-12 flex-1 rounded-xl border-2 border-slate-400 px-4"
+              className="min-h-12 w-full flex-1 rounded-xl border-2 border-slate-400 px-4"
             />
             <Button
+              fullWidth
+              className="sm:w-auto"
               onClick={() => {
                 onAddPersonalizado(customName);
                 setCustomName("");
