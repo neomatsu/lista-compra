@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { CloseIcon, CogIcon, ShareIcon } from "../components/Icons";
 
 interface SyncPanelProps {
   sync: {
@@ -74,121 +75,114 @@ export function SyncPanel({ sync, onToast }: SyncPanelProps) {
     onToast("Dispositivo desvinculado");
   };
 
-  const isCompact = Boolean(sync.familyId) && sync.status === "synced";
-
-  if (!sync.familyId) {
-    return (
-      <>
-        <Card title="Compartir lista" className="mb-3">
-          <p className="mb-2 text-lg font-semibold text-slate-900">Estado: {statusLabel}</p>
-          {sync.error ? <p className="mb-2 text-red-700">{sync.error}</p> : null}
-          <p className="text-base text-slate-700">
-            Comparte esta lista con otro móvil usando un código.
-          </p>
-          <input
-            type="text"
-            value={codeInput}
-            onChange={(event) => setCodeInput(event.target.value.toUpperCase())}
-            placeholder="Código"
-            className="mt-3 min-h-12 w-full rounded-xl border-2 border-slate-400 px-4"
-            aria-label="Código para compartir lista"
-          />
-          <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-            <Button fullWidth onClick={() => void onCreate()} disabled={busy}>
-              Compartir esta lista
-            </Button>
-            <Button fullWidth variant="secondary" onClick={requestJoin} disabled={busy}>
-              Usar código
-            </Button>
-          </div>
-        </Card>
-
-        <ConfirmDialog
-          open={confirmAction === "join"}
-          title="Usar este código"
-          message="Se cargará la lista compartida y sustituirá la lista actual de este móvil."
-          confirmLabel="Sí, usar código"
-          onCancel={() => setConfirmAction(null)}
-          onConfirm={() => void confirmJoin()}
-        />
-      </>
-    );
-  }
-
   return (
     <>
-      <div className="mb-3 flex items-center justify-between rounded-xl border-2 border-green-300 bg-green-50 px-3 py-2">
-        <p className="text-lg font-bold text-green-900">
-          🟢 {isCompact ? "Lista compartida" : statusLabel}
-        </p>
-        <Button
-          variant="secondary"
-          className="min-h-10 px-3 py-1 text-base"
-          onClick={() => setSettingsOpen(true)}
-          aria-label="Abrir ajustes de lista compartida"
-        >
-          ⚙️ Ajustes
-        </Button>
-      </div>
+      <Card className="mb-5 p-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <span
+              className={`inline-flex items-center gap-2 rounded-[var(--r-pill)] px-3 py-2 text-sm font-extrabold ${
+                sync.familyId
+                  ? "bg-[var(--terra-50)] text-[var(--terra-600)]"
+                  : "bg-[var(--surface-2)] text-[var(--ink-2)]"
+              }`}
+            >
+              <ShareIcon size={16} />
+              {sync.familyId ? "Lista compartida" : statusLabel}
+            </span>
+            {sync.error ? (
+              <p className="mt-2 text-sm font-bold text-[var(--danger-600)]">{sync.error}</p>
+            ) : null}
+          </div>
+          <Button
+            variant="ghost"
+            className="min-h-11 shrink-0 px-3 text-sm"
+            onClick={() => setSettingsOpen(true)}
+            aria-label="Abrir ajustes de lista compartida"
+          >
+            <CogIcon size={18} /> Ajustes
+          </Button>
+        </div>
+      </Card>
 
       {settingsOpen ? (
-        <div className="fixed inset-0 z-40 bg-slate-900/35 p-2" role="dialog" aria-modal="true">
-          <Card className="mx-auto mt-8 w-full max-w-lg border-2 border-slate-400">
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-2xl font-bold">Lista compartida</h2>
-              <Button variant="secondary" onClick={() => setSettingsOpen(false)}>
-                Cerrar
-              </Button>
-            </div>
-
-            <p className="mb-1 text-lg font-semibold">Estado: {statusLabel}</p>
-            {sync.error ? <p className="mb-2 text-red-700">{sync.error}</p> : null}
-            <p className="mb-2 text-lg">
-              Código actual: <strong>{sync.familyId}</strong>
-            </p>
-
-            <div className="mb-3 flex gap-2">
-              <Button
-                variant="secondary"
-                onClick={async () => {
-                  try {
-                    await navigator.clipboard.writeText(sync.familyId ?? "");
-                    onToast("Código copiado");
-                  } catch (error) {
-                    console.error(error);
-                    onToast("No se pudo copiar el código");
-                  }
-                }}
+        <div className="fixed inset-0 z-40 bg-[rgba(31,42,38,0.35)] p-3" role="dialog" aria-modal="true">
+          <Card className="mx-auto mt-6 w-full max-w-lg border-[var(--surface-line-strong)]">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h2 className="text-2xl font-black text-[var(--ink)]">Lista compartida</h2>
+              <button
+                className="flex h-11 w-11 items-center justify-center rounded-[var(--r-md)] bg-[var(--surface-2)] text-[var(--ink)]"
+                onClick={() => setSettingsOpen(false)}
+                aria-label="Cerrar ajustes"
               >
-                Copiar código
-              </Button>
+                <CloseIcon size={22} />
+              </button>
             </div>
 
-            <div className="space-y-2 border-t-2 border-slate-300 pt-3">
-              <p className="font-semibold">Cambiar código</p>
+            <p className="mb-2 text-lg font-bold text-[var(--ink)]">Estado: {statusLabel}</p>
+            {sync.error ? <p className="mb-3 text-[var(--danger-600)]">{sync.error}</p> : null}
+
+            {sync.familyId ? (
+              <div className="mb-4 rounded-[var(--r-md)] bg-[var(--surface-2)] p-4">
+                <p className="text-sm font-bold uppercase tracking-[0.08em] text-[var(--ink-3)]">
+                  Código actual
+                </p>
+                <p className="mt-1 text-3xl font-black tracking-widest text-[var(--ink)]">
+                  {sync.familyId}
+                </p>
+                <Button
+                  variant="secondary"
+                  className="mt-3"
+                  onClick={async () => {
+                    try {
+                      await navigator.clipboard.writeText(sync.familyId ?? "");
+                      onToast("Código copiado");
+                    } catch (error) {
+                      console.error(error);
+                      onToast("No se pudo copiar el código");
+                    }
+                  }}
+                >
+                  Copiar código
+                </Button>
+              </div>
+            ) : (
+              <p className="mb-4 text-[var(--ink-2)]">
+                Comparte esta lista con otro móvil usando un código.
+              </p>
+            )}
+
+            <div className="space-y-2 border-t border-[var(--surface-line)] pt-4">
+              <p className="font-bold text-[var(--ink)]">
+                {sync.familyId ? "Usar otro código" : "Usar código"}
+              </p>
               <input
                 type="text"
                 value={codeInput}
                 onChange={(event) => setCodeInput(event.target.value.toUpperCase())}
-                placeholder="Nuevo código"
-                className="min-h-12 w-full rounded-xl border-2 border-slate-400 px-4"
-                aria-label="Nuevo código de lista compartida"
+                placeholder="Código"
+                className="min-h-14 w-full rounded-[var(--r-md)] border border-[var(--surface-line-strong)] bg-[var(--surface)] px-4"
+                aria-label="Código para compartir lista"
               />
-              <Button fullWidth onClick={requestJoin} disabled={busy}>
-                Usar otro código
-              </Button>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {!sync.familyId ? (
+                  <Button fullWidth onClick={() => void onCreate()} disabled={busy}>
+                    Compartir esta lista
+                  </Button>
+                ) : null}
+                <Button fullWidth variant="secondary" onClick={requestJoin} disabled={busy}>
+                  Usar código
+                </Button>
+              </div>
             </div>
 
-            <div className="mt-3 border-t-2 border-slate-300 pt-3">
-              <Button
-                fullWidth
-                variant="ghost"
-                className="border-red-700 bg-red-50 text-red-800 hover:bg-red-100"
-                onClick={() => setConfirmAction("unlink")}
-              >
-                Desvincular
-              </Button>
-            </div>
+            {sync.familyId ? (
+              <div className="mt-4 border-t border-[var(--surface-line)] pt-4">
+                <Button fullWidth variant="danger" onClick={() => setConfirmAction("unlink")}>
+                  Desvincular
+                </Button>
+              </div>
+            ) : null}
           </Card>
         </div>
       ) : null}

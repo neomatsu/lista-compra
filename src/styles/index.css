@@ -3,9 +3,45 @@
 @tailwind utilities;
 
 :root {
-  color: #111827;
-  background-color: #f8fafc;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  --bg: #f6f1e8;
+  --bg-shop: #1f3a34;
+  --surface: #ffffff;
+  --surface-2: #faf5ec;
+  --surface-line: #e8dfce;
+  --surface-line-strong: #d9cdb6;
+  --ink: #1f2a26;
+  --ink-2: #4a554f;
+  --ink-3: #7a8580;
+  --ink-on-dark: #f6f1e8;
+  --green-50: #e8f1ec;
+  --green-100: #c8ddd0;
+  --green-500: #2f7a5c;
+  --green-600: #266449;
+  --green-700: #1b4a36;
+  --terra-50: #fbeee5;
+  --terra-100: #f5d6be;
+  --terra-500: #c8623a;
+  --terra-600: #a84f2b;
+  --amber-50: #fbf3d9;
+  --amber-500: #c99715;
+  --danger-50: #fce8e4;
+  --danger-500: #b23a2b;
+  --danger-600: #8e2d21;
+  --status-bought-bg: #efe7d7;
+  --status-bought-fg: #8a8576;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+  --sh-card: 0 1px 0 rgba(31, 42, 38, 0.04), 0 2px 8px rgba(31, 42, 38, 0.04);
+  --sh-pop: 0 8px 24px rgba(31, 42, 38, 0.1), 0 2px 6px rgba(31, 42, 38, 0.06);
+  --sh-focus: 0 0 0 3px rgba(47, 122, 92, 0.35);
+  --tap: 48px;
+  --tap-lg: 56px;
+  color: var(--ink);
+  background-color: var(--bg);
+  font-family: "Segoe UI", "Inter", Tahoma, Geneva, Verdana, sans-serif;
   font-size: 18px;
 }
 
@@ -21,7 +57,7 @@ body,
 }
 
 body {
-  background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+  background: var(--bg);
 }
 
 button,
@@ -32,4 +68,9 @@ select {
 
 .safe-bottom {
   padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
 }

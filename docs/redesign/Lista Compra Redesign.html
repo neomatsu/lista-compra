@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Lista de la compra — Rediseño</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="tokens.css"/>
+<style>
+  html, body { margin: 0; padding: 0; background: #EDE6D7; font-family: "Inter", system-ui, sans-serif; }
+</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="atoms.jsx"></script>
+<script type="text/babel" src="components.jsx"></script>
+<script type="text/babel" src="screens.jsx"></script>
+<script type="text/babel" data-presets="react">
+const { Phone } = LCAtoms;
+const {
+  ScreenList, ScreenEmpty, ScreenShopping, ScreenCatalog,
+  ScreenNewProduct, ScreenShared, ScreenModalDelete,
+} = LCScreens;
+
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "density": "default",
+  "primary": "green",
+  "showTokens": true
+}/*EDITMODE-END*/;
+
+const PRIMARY_PALETTES = {
+  green:  { "--green-500": "#2F7A5C", "--green-600": "#266449", "--green-700": "#1B4A36", "--green-50": "#E8F1EC", "--green-100": "#C8DDD0" },
+  teal:   { "--green-500": "#1E8A87", "--green-600": "#176F6D", "--green-700": "#0E5453", "--green-50": "#E2F0EF", "--green-100": "#B7DCDB" },
+  warm:   { "--green-500": "#B8642E", "--green-600": "#985024", "--green-700": "#723B1A", "--green-50": "#FBEEE5", "--green-100": "#F0CDB1" },
+  indigo: { "--green-500": "#3B5BAF", "--green-600": "#2E4889", "--green-700": "#22356A", "--green-50": "#E8EBF6", "--green-100": "#C2CCE9" },
+};
+
+function applyPalette(p) {
+  const root = document.documentElement;
+  const swatch = PRIMARY_PALETTES[p] || PRIMARY_PALETTES.green;
+  Object.entries(swatch).forEach(([k, v]) => root.style.setProperty(k, v));
+}
+
+const App = () => {
+  const [tweaks, setTweak] = (typeof window.useTweaks === "function")
+    ? window.useTweaks(TWEAK_DEFAULTS)
+    : [TWEAK_DEFAULTS, () => {}];
+
+  React.useEffect(() => {
+    document.documentElement.setAttribute("data-density", tweaks.density);
+    applyPalette(tweaks.primary);
+  }, [tweaks.density, tweaks.primary]);
+
+  // shorthand aliases
+  const DC = window.DesignCanvas;
+  const DCSection = window.DCSection;
+  const DCArtboard = window.DCArtboard;
+  const TweaksPanel = window.TweaksPanel;
+  const TweakSection = window.TweakSection;
+  const TweakRadio = window.TweakRadio;
+  const TweakSelect = window.TweakSelect;
+  const TweakToggle = window.TweakToggle;
+
+  const phoneW = 390, phoneH = 800;
+
+  return (
+    <>
+      {TweaksPanel && (
+        <TweaksPanel title="Tweaks">
+          <TweakSection label="Color principal">
+            <TweakSelect label="Paleta" value={tweaks.primary}
+              onChange={(v) => setTweak("primary", v)}
+              options={[
+                { value: "green",  label: "Verde calmado" },
+                { value: "teal",   label: "Teal" },
+                { value: "warm",   label: "Terracota" },
+                { value: "indigo", label: "Índigo" },
+              ]}/>
+          </TweakSection>
+          <TweakSection label="Densidad">
+            <TweakRadio label="Tamaño" value={tweaks.density}
+              onChange={(v) => setTweak("density", v)}
+              options={[
+                { value: "cozy", label: "Compacto" },
+                { value: "default", label: "Normal" },
+                { value: "comfortable", label: "Grande" },
+              ]}/>
+          </TweakSection>
+          <TweakSection label="Vista">
+            <TweakToggle label="Mostrar tokens" value={tweaks.showTokens} onChange={(v) => setTweak("showTokens", v)}/>
+          </TweakSection>
+        </TweaksPanel>
+      )}
+
+      <DC title="Lista de la compra · Rediseño" subtitle="Mockups móvil-first · Para personas mayores y familias">
+        <DCSection id="overview" title="01 · Visión general"
+          subtitle="Pantalla principal en sus 3 estados clave: con productos, vacía, y modo compra.">
+          <DCArtboard id="list-default" label="Vista principal · con productos" width={phoneW + 80} height={phoneH + 60}>
+            <div data-screen-label="01 Lista principal" style={{ padding: 30, display: "flex", justifyContent: "center" }}>
+              <Phone w={phoneW} h={phoneH}><ScreenList/></Phone>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="list-empty" label="Estado vacío" width={phoneW + 80} height={phoneH + 60}>
+            <div data-screen-label="02 Lista vacía" style={{ padding: 30, display: "flex", justifyContent: "center" }}>
+              <Phone w={phoneW} h={phoneH}><ScreenEmpty/></Phone>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="shopping" label="Modo compra · enfoque tranquilo" width={phoneW + 80} height={phoneH + 60}>
+            <div data-screen-label="03 Modo compra" style={{ padding: 30, display: "flex", justifyContent: "center" }}>
+              <Phone w={phoneW} h={phoneH}><ScreenShopping/></Phone>
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="catalog" title="02 · Catálogo y nuevo producto"
+          subtitle="Añadir productos de forma rápida desde lo habitual o categorías plegables.">
+          <DCArtboard id="catalog" label="Catálogo · plegable + Lo habitual" width={phoneW + 80} height={phoneH + 60}>
+            <div data-screen-label="04 Catálogo" style={{ padding: 30, display: "flex", justifyContent: "center" }}>
+              <Phone w={phoneW} h={phoneH}><ScreenCatalog/></Phone>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="new-product" label="Nuevo producto · sheet" width={phoneW + 80} height={phoneH + 60}>
+            <div data-screen-label="05 Nuevo producto" style={{ padding: 30, display: "flex", justifyContent: "center" }}>
+              <Phone w={phoneW} h={phoneH}><ScreenNewProduct/></Phone>
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="share" title="03 · Compartir y modales"
+          subtitle="Lista familiar sincronizada y confirmaciones críticas.">
+          <DCArtboard id="shared" label="Lista compartida · ajustes" width={phoneW + 80} height={phoneH + 60}>
+            <div data-screen-label="06 Compartir" style={{ padding: 30, display: "flex", justifyContent: "center" }}>
+              <Phone w={phoneW} h={phoneH}><ScreenShared/></Phone>
+            </div>
+          </DCArtboard>
+          <DCArtboard id="modal-delete" label="Confirmar · eliminar comprados" width={phoneW + 80} height={phoneH + 60}>
+            <div data-screen-label="07 Modal eliminar" style={{ padding: 30, display: "flex", justifyContent: "center" }}>
+              <Phone w={phoneW} h={phoneH}><ScreenModalDelete/></Phone>
+            </div>
+          </DCArtboard>
+        </DCSection>
+
+        {tweaks.showTokens && (
+          <DCSection id="tokens" title="04 · Tokens del sistema"
+            subtitle="Lista compacta de los valores clave para implementar con TailwindCSS.">
+            <DCArtboard id="tokens-color" label="Color · acciones y estados" width={720} height={520}>
+              <TokensColor/>
+            </DCArtboard>
+            <DCArtboard id="tokens-type" label="Tipografía · escala" width={720} height={520}>
+              <TokensType/>
+            </DCArtboard>
+            <DCArtboard id="tokens-shape" label="Radios · sombras · espaciado" width={720} height={520}>
+              <TokensShape/>
+            </DCArtboard>
+            <DCArtboard id="tokens-tap" label="Tamaños táctiles · accesibilidad" width={720} height={520}>
+              <TokensTap/>
+            </DCArtboard>
+          </DCSection>
+        )}
+      </DC>
+    </>
+  );
+};
+
+const TokensColor = () => {
+  const groups = [
+    { title: "Fondo", items: [
+      { name: "bg",        value: "#F6F1E8", note: "App background · cream warm" },
+      { name: "surface",   value: "#FFFFFF", note: "Cards / sheets" },
+      { name: "surface-2", value: "#FAF5EC", note: "Nested surfaces" },
+      { name: "bg-shop",   value: "#1F3A34", note: "Shopping mode dark" },
+    ]},
+    { title: "Acción", items: [
+      { name: "primary",   value: "var(--green-500)", note: "Botón principal" },
+      { name: "primary-press", value: "var(--green-700)", note: "Active / shopping" },
+      { name: "soft",      value: "var(--green-50)", note: "Soft pill bg" },
+    ]},
+    { title: "Estados", items: [
+      { name: "shared",    value: "var(--terra-500)", note: "Shared list accent" },
+      { name: "habitual",  value: "var(--amber-500)", note: '"Lo habitual" star' },
+      { name: "danger",    value: "var(--danger-500)", note: "Delete / unlink" },
+      { name: "bought",    value: "var(--status-bought-bg)", note: "Bought row bg" },
+    ]},
+  ];
+  return (
+    <div className="lc" style={{ padding: 28, height: "100%", overflow: "auto" }}>
+      <h3 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, margin: "0 0 18px" }}>Sistema de color</h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        {groups.map(g => (
+          <div key={g.title}>
+            <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--ink-3)", marginBottom: 8 }}>{g.title}</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 8 }}>
+              {g.items.map(it => (
+                <div key={it.name} style={{ display: "flex", gap: 10, alignItems: "center", padding: 8, borderRadius: 12, border: "1px solid var(--surface-line)", background: "var(--surface)" }}>
+                  <div style={{ width: 44, height: 44, borderRadius: 8, background: it.value, border: "1px solid rgba(0,0,0,.08)" }}/>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, fontFamily: "ui-monospace, Menlo, monospace" }}>--{it.name}</div>
+                    <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{it.note}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const TokensType = () => {
+  const items = [
+    { name: "H1 · Lista de la compra", size: 28, weight: 600, family: "Fraunces", token: "--t-h1" },
+    { name: "H2 · Por comprar",        size: 20, weight: 700, family: "Inter",    token: "--t-h2" },
+    { name: "H3 · Despensa",           size: 17, weight: 700, family: "Inter",    token: "--t-h3" },
+    { name: "Producto · Huevos",       size: 19, weight: 600, family: "Inter",    token: "--t-product" },
+    { name: "Cantidad · 10",           size: 22, weight: 800, family: "Inter",    token: "--t-qty" },
+    { name: "Botón · Empezar compra",  size: 17, weight: 600, family: "Inter",    token: "--t-btn" },
+    { name: "Cuerpo · texto auxiliar", size: 14, weight: 500, family: "Inter",    token: "--t-caption" },
+  ];
+  return (
+    <div className="lc" style={{ padding: 28, height: "100%", overflow: "auto" }}>
+      <h3 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, margin: "0 0 18px" }}>Tipografía</h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+        {items.map(it => (
+          <div key={it.token} style={{ display: "flex", alignItems: "baseline", gap: 16, padding: "10px 0", borderBottom: "1px solid var(--surface-line)" }}>
+            <span style={{ flex: 1, fontFamily: it.family === "Fraunces" ? "var(--font-display)" : "var(--font-sans)", fontSize: it.size, fontWeight: it.weight, letterSpacing: it.family === "Fraunces" ? "-0.015em" : "-0.005em" }}>
+              {it.name}
+            </span>
+            <span style={{ fontSize: 12, color: "var(--ink-3)", fontFamily: "ui-monospace, Menlo, monospace", whiteSpace: "nowrap" }}>
+              {it.token} · {it.size}/{it.weight} · {it.family}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+const TokensShape = () => {
+  const radii = [{ n: "sm", v: 10 }, { n: "md", v: 14 }, { n: "lg", v: 20 }, { n: "xl", v: 28 }, { n: "pill", v: 999 }];
+  const space = [{ n: "1", v: 4 }, { n: "2", v: 8 }, { n: "3", v: 12 }, { n: "4", v: 16 }, { n: "5", v: 20 }, { n: "6", v: 24 }, { n: "7", v: 32 }, { n: "8", v: 40 }];
+  return (
+    <div className="lc" style={{ padding: 28, height: "100%", overflow: "auto" }}>
+      <h3 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, margin: "0 0 18px" }}>Radios · espaciado · sombras</h3>
+
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--ink-3)", marginBottom: 10 }}>Radios</div>
+      <div style={{ display: "flex", gap: 12, marginBottom: 22 }}>
+        {radii.map(r => (
+          <div key={r.n} style={{ textAlign: "center" }}>
+            <div style={{ width: 64, height: 64, background: "var(--green-50)", border: "1.5px solid var(--green-100)", borderRadius: r.v }}/>
+            <div style={{ fontSize: 11, marginTop: 6, fontFamily: "ui-monospace, Menlo, monospace" }}>--r-{r.n}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--ink-3)", marginBottom: 10 }}>Espaciado base 4</div>
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 8, marginBottom: 22 }}>
+        {space.map(s => (
+          <div key={s.n} style={{ textAlign: "center" }}>
+            <div style={{ width: s.v, height: s.v, background: "var(--terra-500)", borderRadius: 4 }}/>
+            <div style={{ fontSize: 11, marginTop: 6, fontFamily: "ui-monospace, Menlo, monospace", color: "var(--ink-3)" }}>{s.v}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ fontSize: 12, fontWeight: 700, letterSpacing: ".08em", textTransform: "uppercase", color: "var(--ink-3)", marginBottom: 10 }}>Sombras</div>
+      <div style={{ display: "flex", gap: 16 }}>
+        <div style={{ width: 140, height: 80, background: "#fff", borderRadius: 14, border: "1px solid var(--surface-line)", boxShadow: "var(--sh-card)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontFamily: "ui-monospace, Menlo, monospace" }}>--sh-card</div>
+        <div style={{ width: 140, height: 80, background: "#fff", borderRadius: 14, boxShadow: "var(--sh-pop)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontFamily: "ui-monospace, Menlo, monospace" }}>--sh-pop</div>
+      </div>
+    </div>
+  );
+};
+
+const TokensTap = () => (
+  <div className="lc" style={{ padding: 28, height: "100%", overflow: "auto" }}>
+    <h3 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 600, margin: "0 0 6px" }}>Accesibilidad táctil</h3>
+    <p style={{ margin: "0 0 22px", color: "var(--ink-2)", fontSize: 14 }}>
+      Mínimos garantizados, optimizados para personas mayores con motricidad reducida.
+    </p>
+    <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ width: 56, height: 56, borderRadius: 14, background: "var(--green-500)" }}/>
+        <div>
+          <div style={{ fontWeight: 700 }}>56 px · botón principal</div>
+          <div style={{ fontSize: 13, color: "var(--ink-3)" }}>Empezar compra · Terminar compra · Añadir</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ width: 48, height: 48, borderRadius: 12, background: "var(--green-100)", border: "1.5px solid var(--green-500)" }}/>
+        <div>
+          <div style={{ fontWeight: 700 }}>48 px · acción de fila</div>
+          <div style={{ fontSize: 13, color: "var(--ink-3)" }}>Filas, secundarios, navegación</div>
+        </div>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 10, background: "var(--terra-500)" }}/>
+        <div>
+          <div style={{ fontWeight: 700 }}>44 px · stepper +/−</div>
+          <div style={{ fontSize: 13, color: "var(--ink-3)" }}>Espaciados 6 px entre sí, foco visible al teclado</div>
+        </div>
+      </div>
+      <div style={{ marginTop: 8, padding: 16, borderRadius: 14, background: "var(--surface-2)", fontSize: 13, color: "var(--ink-2)", border: "1px solid var(--surface-line)" }}>
+        <strong style={{ color: "var(--ink)" }}>Reglas clave:</strong> texto ≥ 16 px en cuerpo y ≥ 19 px en producto · contraste AA en cualquier estado · iconos siempre acompañados de etiqueta · evitar gestos ocultos como única acción.
+      </div>
+    </div>
+  </div>
+);
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+</body>
+</html>

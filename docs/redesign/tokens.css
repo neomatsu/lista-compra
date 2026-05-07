@@ -1,0 +1,117 @@
+/* ============================================================
+   Lista de la compra — Design tokens
+   Warm, calm, accessible. Mobile-first.
+   ============================================================ */
+
+:root {
+  /* ---------- Color: surfaces (warm neutrals) ---------- */
+  --bg:           #F6F1E8;   /* main app background — warm cream */
+  --bg-shop:      #1F3A34;   /* shop-mode dark background */
+  --surface:      #FFFFFF;   /* cards / sheets */
+  --surface-2:    #FAF5EC;   /* nested / secondary surfaces */
+  --surface-line: #E8DFCE;   /* hairline divider on cream */
+  --surface-line-strong: #D9CDB6;
+
+  /* ---------- Color: ink (text) ---------- */
+  --ink:          #1F2A26;   /* primary text */
+  --ink-2:        #4A554F;   /* secondary text */
+  --ink-3:        #7A8580;   /* tertiary / hints */
+  --ink-on-dark:  #F6F1E8;
+
+  /* ---------- Color: brand / actions ---------- */
+  --green-50:   #E8F1EC;
+  --green-100:  #C8DDD0;
+  --green-500:  #2F7A5C;     /* primary action — softer than original */
+  --green-600:  #266449;
+  --green-700:  #1B4A36;
+
+  --terra-50:   #FBEEE5;
+  --terra-100:  #F5D6BE;
+  --terra-500:  #C8623A;     /* warm accent — shared / highlights */
+  --terra-600:  #A84F2B;
+
+  --amber-50:   #FBF3D9;
+  --amber-500:  #C99715;     /* "lo habitual" star / pinned */
+
+  --danger-50:  #FCE8E4;
+  --danger-500: #B23A2B;
+  --danger-600: #8E2D21;
+
+  /* ---------- Status ---------- */
+  --status-pending:  var(--ink);
+  --status-bought-bg:#EFE7D7;
+  --status-bought-fg:#8A8576;
+
+  /* ---------- Radii ---------- */
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  /* ---------- Shadows (very subtle) ---------- */
+  --sh-card:  0 1px 0 rgba(31,42,38,.04), 0 2px 8px rgba(31,42,38,.04);
+  --sh-pop:   0 8px 24px rgba(31,42,38,.10), 0 2px 6px rgba(31,42,38,.06);
+  --sh-focus: 0 0 0 3px rgba(47,122,92,.35);
+
+  /* ---------- Spacing ---------- */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 20px;
+  --s-6: 24px;
+  --s-7: 32px;
+  --s-8: 40px;
+
+  /* ---------- Touch targets ---------- */
+  --tap:    48px;   /* WCAG min */
+  --tap-lg: 56px;   /* primary CTAs */
+
+  /* ---------- Type ---------- */
+  --font-sans: "Inter", "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+
+  /* Body & UI sizes — generous for elderly users */
+  --t-h1:       28px;   /* page title */
+  --t-h2:       20px;   /* section headers ("Por comprar") */
+  --t-h3:       17px;   /* category labels */
+  --t-product:  19px;   /* product name */
+  --t-qty:      22px;   /* quantity numbers */
+  --t-btn:      17px;   /* buttons */
+  --t-body:     16px;   /* body */
+  --t-caption:  14px;   /* hints / secondary */
+}
+
+/* Density variants applied via JS on the device root */
+[data-density="comfortable"] {
+  --t-h1: 30px; --t-product: 20px; --t-btn: 18px; --t-qty: 24px;
+  --tap: 52px; --tap-lg: 60px;
+}
+[data-density="cozy"] {
+  --t-h1: 26px; --t-product: 17px; --t-btn: 16px; --t-qty: 20px;
+  --tap: 44px; --tap-lg: 52px;
+}
+
+/* ----------- base resets scoped to .device frames ----------- */
+.lc, .lc * {
+  box-sizing: border-box;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+.lc {
+  font-family: var(--font-sans);
+  color: var(--ink);
+  background: var(--bg);
+  font-size: var(--t-body);
+  line-height: 1.4;
+  letter-spacing: -0.005em;
+}
+.lc button { font-family: inherit; }
+
+/* Focus visible — high contrast ring everywhere */
+.lc :focus-visible {
+  outline: none;
+  box-shadow: var(--sh-focus);
+  border-radius: 8px;
+}

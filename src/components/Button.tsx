@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes } from "react";
 
-type ButtonVariant = "primary" | "secondary" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "ghost" | "soft" | "danger";
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
@@ -8,12 +8,18 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const baseClass =
-  "min-h-12 rounded-xl border-2 px-4 py-3 text-lg font-semibold shadow-md transition active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed";
+  "inline-flex min-h-[var(--tap-lg)] items-center justify-center gap-2 rounded-[var(--r-md)] border px-5 py-3 text-[17px] font-bold transition active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50";
 
 const variantClass: Record<ButtonVariant, string> = {
-  primary: "border-teal-900 bg-teal-700 text-white hover:bg-teal-800",
-  secondary: "border-slate-500 bg-slate-300 text-slate-950 hover:bg-slate-400",
-  ghost: "border-slate-500 bg-white text-slate-900 hover:bg-slate-100"
+  primary: "border-transparent bg-[var(--green-500)] text-white hover:bg-[var(--green-600)]",
+  secondary:
+    "border-[var(--surface-line-strong)] bg-[var(--surface)] text-[var(--ink)] hover:bg-[var(--surface-2)]",
+  ghost:
+    "border-transparent bg-transparent text-[var(--ink)] hover:bg-[var(--surface-2)]",
+  soft:
+    "border-transparent bg-[var(--green-50)] text-[var(--green-700)] hover:bg-[var(--green-100)]",
+  danger:
+    "border-[var(--danger-500)] bg-[var(--danger-50)] text-[var(--danger-600)] hover:bg-red-100"
 };
 
 export function Button({

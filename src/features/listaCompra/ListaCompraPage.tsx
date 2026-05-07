@@ -1,6 +1,16 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../../components/Button";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
+import { Card } from "../../components/Card";
+import {
+  CartIcon,
+  CatalogIcon,
+  CheckIcon,
+  ListIcon,
+  PlusIcon,
+  ShareIcon,
+  TrashIcon
+} from "../../components/Icons";
 import { Toast } from "../../components/Toast";
 import type { ProductoLista } from "../../db/db";
 import { SyncPanel } from "../../sync/SyncPanel";
@@ -139,40 +149,108 @@ export function ListaCompraPage() {
     pushToast(`${restoredName} restaurado`);
   };
 
+  const totalCompra = pendientes.length + comprados.length;
+  const progress = totalCompra ? Math.round((comprados.length / totalCompra) * 100) : 0;
+  const isEmpty = !pendientes.length && !comprados.length;
+
   return (
-    <main className="mx-auto w-full max-w-3xl px-3 pb-44 pt-3">
-      <header
-        className={`mb-3 rounded-2xl border-2 bg-white p-4 shadow-md ${
-          modoCompra ? "border-teal-700" : "border-slate-300"
-        }`}
-      >
-        <h1 className="text-3xl font-extrabold text-slate-900">Lista de la compra</h1>
-        <p className="mt-1 text-2xl font-bold text-slate-800">🛒 {pendientes.length} productos pendientes</p>
-        <p className="mt-1 text-lg text-slate-700">{modoCompra ? "Compra en curso" : "Hoy"}</p>
-        <Button
-          fullWidth
-          variant={modoCompra ? "primary" : "secondary"}
-          className="mt-3"
-          onClick={() => setModoCompra((prev) => !prev)}
-          aria-pressed={modoCompra}
-        >
-          {modoCompra ? "Terminar compra" : "🛒 Modo compra"}
-        </Button>
-      </header>
+    <main className="mx-auto w-full max-w-3xl px-4 pb-32 pt-3">
+      {modoCompra ? (
+        <header className="mb-5 rounded-[24px] bg-[var(--green-700)] p-5 text-[var(--ink-on-dark)] shadow-[var(--sh-card)]">
+          <div className="mb-2 flex items-center gap-2 text-sm font-extrabold uppercase tracking-[0.12em] opacity-90">
+            <CartIcon size={18} />
+            Modo compra
+          </div>
+          <div className="mb-4 flex items-baseline gap-3">
+            <span className="text-5xl font-black leading-none">{pendientes.length}</span>
+            <span className="text-base font-bold opacity-90">
+              por comprar · {comprados.length} en el carro
+            </span>
+          </div>
+          <div className="mb-4 h-2 overflow-hidden rounded-[var(--r-pill)] bg-white/20">
+            <div
+              className="h-full rounded-[var(--r-pill)] bg-[#7BC79E] transition-all"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+          <Button
+            fullWidth
+            variant="secondary"
+            className="border-transparent bg-[var(--bg)] text-[var(--green-700)] hover:bg-[var(--surface-2)]"
+            onClick={() => setModoCompra(false)}
+            aria-pressed={modoCompra}
+          >
+            <CheckIcon size={22} /> Terminar compra
+          </Button>
+        </header>
+      ) : (
+        <header className="mb-4 rounded-[24px] border border-[var(--surface-line)] bg-[var(--surface)] p-5 shadow-[var(--sh-card)]">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="text-sm font-extrabold uppercase tracking-[0.1em] text-[var(--ink-3)]">
+              Hoy
+            </p>
+          </div>
+          <h1 className="text-[28px] font-black leading-tight text-[var(--ink)]">
+            Lista de la compra
+          </h1>
+          <div className="mt-4 flex items-baseline gap-2">
+            <span
+              className={`text-5xl font-black leading-none ${
+                pendientes.length ? "text-[var(--green-700)]" : "text-[var(--ink-3)]"
+              }`}
+            >
+              {pendientes.length}
+            </span>
+            <span className="text-base font-bold text-[var(--ink-2)]">
+              {pendientes.length === 1 ? "producto pendiente" : "productos pendientes"}
+            </span>
+          </div>
+          <Button
+            fullWidth
+            variant="primary"
+            className="mt-5"
+            onClick={() => setModoCompra(true)}
+            aria-pressed={modoCompra}
+            disabled={!pendientes.length}
+          >
+            <CartIcon size={22} /> Empezar compra
+          </Button>
+        </header>
+      )}
 
       {!modoCompra ? <SyncPanel sync={sync} onToast={pushToast} /> : null}
 
-      <div className="space-y-3">
-        <ListaSection
-          title="Por comprar"
-          items={pendientes}
-          categorias={categorias ?? []}
-          emptyText="No hay productos pendientes."
-          onToggle={toggleComprado}
-          onCantidad={onCantidad}
-          showQuantityControls={!modoCompra}
-          purchaseMode={modoCompra}
-        />
+      <div className="space-y-5">
+        {isEmpty && !modoCompra ? (
+          <Card className="px-6 py-7 text-center">
+            <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-[24px] bg-[var(--green-50)] text-[var(--green-700)]">
+              <CartIcon size={42} />
+            </div>
+            <h2 className="text-xl font-black text-[var(--ink)]">Tu lista está vacía</h2>
+            <p className="mx-auto mt-2 max-w-sm text-base leading-relaxed text-[var(--ink-2)]">
+              Añade productos desde el catálogo o crea uno nuevo.
+            </p>
+            <div className="mt-5 flex flex-col gap-2">
+              <Button fullWidth onClick={() => setCatalogoOpen(true)}>
+                <PlusIcon size={20} /> Abrir catálogo
+              </Button>
+              <Button fullWidth variant="secondary" onClick={() => setCatalogoOpen(true)}>
+                Crear producto nuevo
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <ListaSection
+            title="Por comprar"
+            items={pendientes}
+            categorias={categorias ?? []}
+            emptyText="No hay productos pendientes."
+            onToggle={toggleComprado}
+            onCantidad={onCantidad}
+            showQuantityControls={!modoCompra}
+            purchaseMode={modoCompra}
+          />
+        )}
 
         {!modoCompra ? (
           <>
@@ -187,32 +265,58 @@ export function ListaCompraPage() {
             />
             <Button
               fullWidth
-              variant="ghost"
-              className="border-red-700 bg-red-50 text-red-800 hover:bg-red-100"
+              variant="danger"
               onClick={() => void onDeleteComprados()}
             >
-              🗑 Eliminar productos comprados
+              <TrashIcon size={20} /> Eliminar productos comprados
             </Button>
           </>
+        ) : comprados.length ? (
+          <ListaSection
+            title={`En el carro · ${comprados.length}`}
+            items={comprados}
+            categorias={categorias ?? []}
+            emptyText=""
+            onToggle={toggleComprado}
+            onCantidad={onCantidad}
+            showQuantityControls={false}
+            purchaseMode={modoCompra}
+          />
         ) : null}
       </div>
 
-      <div className="safe-bottom fixed bottom-0 left-0 right-0 z-30 border-t-2 border-slate-400 bg-white p-3">
-        <div className="mx-auto grid w-full max-w-3xl grid-cols-2 gap-2">
-          <Button fullWidth onClick={() => setCatalogoOpen(true)}>
-            Añadir productos
-          </Button>
+      <nav className="safe-bottom fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--surface-line)] bg-[var(--surface)]/95 px-4 pt-2 shadow-[0_-8px_24px_rgba(31,42,38,0.08)] backdrop-blur">
+        <div className="mx-auto grid w-full max-w-3xl grid-cols-3 gap-1">
+          <button className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-[var(--r-md)] bg-[var(--green-50)] text-sm font-extrabold text-[var(--green-700)]">
+            <ListIcon size={22} />
+            Mi lista
+          </button>
+          <button
+            className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-[var(--r-md)] text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-2)]"
+            onClick={() => setCatalogoOpen(true)}
+          >
+            <CatalogIcon size={22} />
+            Catálogo
+          </button>
           {modoCompra ? (
-            <Button fullWidth variant="secondary" onClick={() => setModoCompra(false)}>
+            <button
+              className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-[var(--r-md)] text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-2)]"
+              onClick={() => setModoCompra(false)}
+            >
+              <CheckIcon size={22} />
               Terminar
-            </Button>
+            </button>
           ) : (
-            <Button fullWidth variant="secondary" onClick={() => void onShare()}>
+            <button
+              className="flex min-h-16 flex-col items-center justify-center gap-1 rounded-[var(--r-md)] text-sm font-bold text-[var(--ink-2)] hover:bg-[var(--surface-2)]"
+              onClick={() => void onShare()}
+            >
+              <ShareIcon size={22} />
               Compartir
-            </Button>
+            </button>
           )}
         </div>
-      </div>
+      </nav>
 
       <CatalogoPanel
         open={catalogoOpen}

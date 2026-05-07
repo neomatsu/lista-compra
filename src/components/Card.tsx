@@ -8,9 +8,9 @@ interface CardProps extends PropsWithChildren {
 export function Card({ title, children, className = "" }: CardProps) {
   return (
     <section
-      className={`rounded-2xl border-2 border-slate-300 bg-white p-4 shadow-md ${className}`}
+      className={`rounded-[var(--r-lg)] border border-[var(--surface-line)] bg-[var(--surface)] p-5 shadow-[var(--sh-card)] ${className}`}
     >
-      {title ? <h2 className="mb-3 text-xl font-bold">{title}</h2> : null}
+      {title ? <h2 className="mb-3 text-xl font-extrabold text-[var(--ink)]">{title}</h2> : null}
       {children}
     </section>
   );

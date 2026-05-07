@@ -26,11 +26,11 @@ test.beforeEach(async ({ page }) => {
 
 test("flujo principal de compra", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Lista de la compra" })).toBeVisible();
-  await expect(page.getByText("No hay productos pendientes.")).toBeVisible();
+  await expect(page.getByText("Tu lista está vacía")).toBeVisible();
 
-  await page.getByRole("button", { name: "Añadir productos" }).click();
+  await page.getByRole("button", { name: "Catálogo", exact: true }).click();
   await page.getByRole("button", { name: "Añadir Agua" }).click();
-  await page.getByRole("button", { name: "Cerrar" }).click();
+  await page.getByRole("button", { name: "Cerrar catálogo" }).click();
 
   await expect(page.getByRole("heading", { name: "Bebidas" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Marcar comprado Agua" })).toBeVisible();
@@ -46,29 +46,29 @@ test("flujo principal de compra", async ({ page }) => {
 });
 
 test("crear producto de catalogo con categoria", async ({ page }) => {
-  await page.getByRole("button", { name: "Añadir productos" }).click();
+  await page.getByRole("button", { name: "Catálogo", exact: true }).click();
   await page.getByRole("textbox", { name: "Nombre del nuevo producto" }).fill("Galletas e2e");
   await page.getByLabel("Categoría").selectOption({ label: "Despensa" });
   await page.getByRole("button", { name: "Guardar y añadir" }).click();
-  await page.getByRole("button", { name: "Cerrar" }).click();
+  await page.getByRole("button", { name: "Cerrar catálogo" }).click();
 
   await expect(page.getByRole("heading", { name: "Despensa" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Marcar comprado Galletas e2e" })).toBeVisible();
 
-  await page.getByRole("button", { name: "Añadir productos" }).click();
-  await page.getByRole("searchbox", { name: "Buscar en el catálogo" }).fill("galletas e2e");
+  await page.getByRole("button", { name: "Catálogo", exact: true }).click();
+  await page.getByRole("searchbox", { name: "Buscar producto" }).fill("galletas e2e");
   await expect(page.getByRole("button", { name: "Añadir Galletas e2e" })).toBeVisible();
 });
 
 test("modo compra y modal de eliminacion", async ({ page }) => {
-  await page.getByRole("button", { name: "Añadir productos" }).click();
+  await page.getByRole("button", { name: "Catálogo", exact: true }).click();
   await page.getByRole("button", { name: "Añadir Agua" }).click();
-  await page.getByRole("button", { name: "Cerrar" }).click();
+  await page.getByRole("button", { name: "Cerrar catálogo" }).click();
 
-  await page.getByRole("button", { name: "🛒 Modo compra" }).click();
+  await page.getByRole("button", { name: "Empezar compra" }).click();
   await expect(page.getByRole("button", { name: "Terminar compra" })).toBeVisible();
-  await expect(page.getByText("Compra en curso")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Compartir esta lista" })).toHaveCount(0);
+  await expect(page.getByText("Modo compra")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ajustes" })).toHaveCount(0);
 
   await page.getByRole("button", { name: "Marcar comprado Agua" }).click();
   await page.getByRole("button", { name: "Terminar compra" }).click();

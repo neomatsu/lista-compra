@@ -28,26 +28,23 @@ export function ConfirmDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/45 p-3"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(31,42,38,0.45)] p-3"
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
     >
-      <Card className="w-full max-w-lg border-2 border-slate-500">
-        <h2 id="confirm-dialog-title" className="mb-3 text-2xl font-extrabold text-slate-950">
+      <Card className="w-full max-w-lg border-[var(--surface-line-strong)]">
+        <h2 id="confirm-dialog-title" className="mb-3 text-2xl font-extrabold text-[var(--ink)]">
           {title}
         </h2>
-        <p className="mb-4 text-lg leading-relaxed text-slate-800">{message}</p>
+        <p className="mb-4 text-lg leading-relaxed text-[var(--ink-2)]">{message}</p>
         <div className="grid gap-2 sm:grid-cols-2">
           <Button fullWidth variant="secondary" onClick={onCancel}>
             {cancelLabel}
           </Button>
           <Button
             fullWidth
-            variant={danger ? "ghost" : "primary"}
-            className={
-              danger ? "border-red-800 bg-red-50 text-red-900 hover:bg-red-100" : undefined
-            }
+            variant={danger ? "danger" : "primary"}
             onClick={onConfirm}
           >
             {confirmLabel}
