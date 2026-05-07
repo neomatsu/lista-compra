@@ -1,5 +1,6 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "../../components/Button";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import { Toast } from "../../components/Toast";
 import type { ProductoLista } from "../../db/db";
 import { SyncPanel } from "../../sync/SyncPanel";
@@ -20,6 +21,7 @@ export function ListaCompraPage() {
   const [modoCompra, setModoCompra] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [lastDeleted, setLastDeleted] = useState<ProductoLista | null>(null);
+  const [deleteCompradosOpen, setDeleteCompradosOpen] = useState(false);
   const toastTimerRef = useRef<number | null>(null);
   const sync = useSync();
 
@@ -28,7 +30,7 @@ export function ListaCompraPage() {
     productosCatalogo,
     productosLista,
     addFromCatalog,
-    addCustomProduct,
+    addCatalogProduct,
     toggleComprado,
     changeCantidad,
     removeComprados,
@@ -97,11 +99,11 @@ export function ListaCompraPage() {
       return;
     }
 
-    const confirmed = window.confirm("¿Eliminar todos los productos comprados?");
-    if (!confirmed) {
-      return;
-    }
+    setDeleteCompradosOpen(true);
+  };
 
+  const confirmDeleteComprados = async () => {
+    setDeleteCompradosOpen(false);
     await removeComprados();
     pushToast("Productos comprados eliminados");
   };
@@ -138,22 +140,27 @@ export function ListaCompraPage() {
   };
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-3 pb-28 pt-3">
-      <header className="mb-3 rounded-2xl border-2 border-slate-300 bg-white p-4 shadow-md">
+    <main className="mx-auto w-full max-w-3xl px-3 pb-44 pt-3">
+      <header
+        className={`mb-3 rounded-2xl border-2 bg-white p-4 shadow-md ${
+          modoCompra ? "border-teal-700" : "border-slate-300"
+        }`}
+      >
         <h1 className="text-3xl font-extrabold text-slate-900">Lista de la compra</h1>
         <p className="mt-1 text-2xl font-bold text-slate-800">🛒 {pendientes.length} productos pendientes</p>
-        <p className="mt-1 text-lg text-slate-700">Lista de hoy</p>
+        <p className="mt-1 text-lg text-slate-700">{modoCompra ? "Compra en curso" : "Hoy"}</p>
         <Button
           fullWidth
           variant={modoCompra ? "primary" : "secondary"}
           className="mt-3"
           onClick={() => setModoCompra((prev) => !prev)}
+          aria-pressed={modoCompra}
         >
-          🛒 Modo compra {modoCompra ? "(Activo)" : ""}
+          {modoCompra ? "Terminar compra" : "🛒 Modo compra"}
         </Button>
       </header>
 
-      <SyncPanel sync={sync} onToast={pushToast} />
+      {!modoCompra ? <SyncPanel sync={sync} onToast={pushToast} /> : null}
 
       <div className="space-y-3">
         <ListaSection
@@ -164,6 +171,7 @@ export function ListaCompraPage() {
           onToggle={toggleComprado}
           onCantidad={onCantidad}
           showQuantityControls={!modoCompra}
+          purchaseMode={modoCompra}
         />
 
         {!modoCompra ? (
@@ -190,13 +198,19 @@ export function ListaCompraPage() {
       </div>
 
       <div className="safe-bottom fixed bottom-0 left-0 right-0 z-30 border-t-2 border-slate-400 bg-white p-3">
-        <div className="mx-auto flex w-full max-w-3xl gap-2">
+        <div className="mx-auto grid w-full max-w-3xl grid-cols-2 gap-2">
           <Button fullWidth onClick={() => setCatalogoOpen(true)}>
             Añadir productos
           </Button>
-          <Button fullWidth variant="secondary" onClick={() => void onShare()}>
-            Compartir
-          </Button>
+          {modoCompra ? (
+            <Button fullWidth variant="secondary" onClick={() => setModoCompra(false)}>
+              Terminar
+            </Button>
+          ) : (
+            <Button fullWidth variant="secondary" onClick={() => void onShare()}>
+              Compartir
+            </Button>
+          )}
         </div>
       </div>
 
@@ -209,11 +223,33 @@ export function ListaCompraPage() {
           void addFromCatalog(producto);
           pushToast(`${producto.nombre} añadido`);
         }}
-        onAddPersonalizado={(nombre) => {
-          void addCustomProduct(nombre);
-          if (nombre.trim()) {
-            pushToast(`${nombre.trim()} añadido`);
+        onCreateCatalogo={async (nombre, categoriaId, addToList) => {
+          const result = await addCatalogProduct(nombre, categoriaId);
+          if (result.status === "invalid-name") {
+            pushToast("Escribe un producto");
+            return false;
           }
+          if (result.status === "invalid-category") {
+            pushToast("Elige una categoría");
+            return false;
+          }
+          if (result.status === "exists") {
+            if (addToList) {
+              await addFromCatalog(result.producto);
+              pushToast(`${result.producto.nombre} añadido`);
+              return true;
+            }
+            pushToast("Ese producto ya existe");
+            return false;
+          }
+
+          if (addToList) {
+            await addFromCatalog(result.producto);
+            pushToast(`${result.producto.nombre} guardado y añadido`);
+          } else {
+            pushToast(`${result.producto.nombre} guardado`);
+          }
+          return true;
         }}
       />
 
@@ -221,6 +257,16 @@ export function ListaCompraPage() {
         message={toast?.message ?? null}
         actionLabel={toast?.actionLabel}
         onAction={toast?.actionLabel === "Deshacer" ? () => void onUndoDelete() : undefined}
+      />
+
+      <ConfirmDialog
+        open={deleteCompradosOpen}
+        title="Eliminar comprados"
+        message="Se quitarán de la lista todos los productos que ya has marcado como comprados."
+        confirmLabel="Sí, eliminar"
+        danger
+        onCancel={() => setDeleteCompradosOpen(false)}
+        onConfirm={() => void confirmDeleteComprados()}
       />
     </main>
   );

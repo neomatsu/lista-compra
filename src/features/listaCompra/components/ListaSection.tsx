@@ -10,6 +10,7 @@ interface ListaSectionProps {
   onToggle: (id: number, comprado: boolean) => void;
   onCantidad: (id: number, current: number, delta: number) => void;
   showQuantityControls?: boolean;
+  purchaseMode?: boolean;
 }
 
 export function ListaSection({
@@ -19,7 +20,8 @@ export function ListaSection({
   emptyText,
   onToggle,
   onCantidad,
-  showQuantityControls = true
+  showQuantityControls = true,
+  purchaseMode = false
 }: ListaSectionProps) {
   if (!items.length) {
     return (
@@ -44,13 +46,18 @@ export function ListaSection({
                   className={`rounded-xl border-2 p-3 transition-all duration-200 ${
                     item.comprado
                       ? "border-green-500 bg-green-100"
-                      : "border-slate-300 bg-slate-50"
+                      : purchaseMode
+                        ? "border-teal-700 bg-white"
+                        : "border-slate-300 bg-slate-50"
                   }`}
                 >
                   <div className="flex items-center gap-3">
                     <button
-                      className="flex min-h-14 flex-1 min-w-0 items-center gap-3 rounded-lg text-left"
+                      className={`flex flex-1 min-w-0 items-center gap-3 rounded-lg text-left ${
+                        purchaseMode ? "min-h-16" : "min-h-14"
+                      }`}
                       onClick={() => item.id && onToggle(item.id, item.comprado)}
+                      aria-label={`${item.comprado ? "Marcar pendiente" : "Marcar comprado"} ${item.nombre}`}
                       onKeyDown={(event) => {
                         if (event.key === "Enter" || event.key === " ") {
                           event.preventDefault();
@@ -68,7 +75,7 @@ export function ListaSection({
                       ) : null}
                       <span className="flex-1 min-w-0">
                         <span
-                          className={`block truncate whitespace-nowrap text-lg font-semibold ${
+                          className={`block break-words text-lg font-semibold ${
                             item.comprado ? "text-slate-700 line-through" : "text-slate-900"
                           }`}
                         >
@@ -111,8 +118,9 @@ export function ListaSection({
                         </>
                       ) : (
                         <span
-                          className="min-w-10 rounded-lg bg-white px-3 py-2 text-center text-2xl font-extrabold text-slate-900"
+                          className="min-w-12 rounded-lg bg-white px-3 py-2 text-center text-2xl font-extrabold text-slate-900"
                           aria-live="polite"
+                          aria-label={`Cantidad ${item.cantidad}`}
                         >
                           {item.cantidad}
                         </span>

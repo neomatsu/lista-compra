@@ -10,6 +10,11 @@ export interface ProductoCatalogo {
   id?: number;
   nombre: string;
   categoriaId: number;
+  origen?: "seed" | "usuario" | "familia";
+  remoteId?: string;
+  deleted?: boolean;
+  createdAt?: number;
+  updatedAt?: number;
 }
 
 export interface ProductoLista {
@@ -51,6 +56,24 @@ export interface SyncMap {
   localId: number;
 }
 
+export interface CatalogOutboxEvent {
+  id?: number;
+  type: OutboxEventType;
+  remoteId: string;
+  payload: {
+    nombre: string;
+    categoriaId: number;
+    createdAt: number;
+    updatedAt: number;
+  };
+  createdAt: number;
+}
+
+export interface CatalogSyncMap {
+  remoteId: string;
+  localId: number;
+}
+
 class ListaCompraDB extends Dexie {
   categorias!: Table<Categoria, number>;
   productosCatalogo!: Table<ProductoCatalogo, number>;
@@ -58,6 +81,8 @@ class ListaCompraDB extends Dexie {
   configuracion!: Table<Configuracion, string>;
   outbox!: Table<OutboxEvent, number>;
   syncMap!: Table<SyncMap, string>;
+  catalogOutbox!: Table<CatalogOutboxEvent, number>;
+  catalogSyncMap!: Table<CatalogSyncMap, string>;
 
   constructor() {
     super("lista_compra_db");
@@ -76,6 +101,17 @@ class ListaCompraDB extends Dexie {
       configuracion: "&clave",
       outbox: "++id, type, createdAt, remoteId",
       syncMap: "&remoteId, localId"
+    });
+    this.version(3).stores({
+      categorias: "++id, orden, nombre",
+      productosCatalogo: "++id, categoriaId, nombre, remoteId, updatedAt, origen",
+      productosLista:
+        "++id, productoCatalogoId, categoriaId, comprado, createdAt, updatedAt, nombre",
+      configuracion: "&clave",
+      outbox: "++id, type, createdAt, remoteId",
+      syncMap: "&remoteId, localId",
+      catalogOutbox: "++id, type, createdAt, remoteId",
+      catalogSyncMap: "&remoteId, localId"
     });
   }
 }

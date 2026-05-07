@@ -3,11 +3,30 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes("node_modules/react") || id.includes("node_modules/react-dom")) {
+            return "react";
+          }
+          if (id.includes("node_modules/dexie")) {
+            return "dexie";
+          }
+          if (id.includes("node_modules/@firebase") || id.includes("node_modules/firebase")) {
+            return "firebase";
+          }
+          return undefined;
+        }
+      }
+    }
+  },
   plugins: [
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["vite.svg"],
+      includeAssets: ["favicon.svg", "app-icon.svg"],
       manifest: {
         name: "Lista de la compra",
         short_name: "Lista compra",
@@ -19,7 +38,7 @@ export default defineConfig({
         lang: "es",
         icons: [
           {
-            src: "/vite.svg",
+            src: "/app-icon.svg",
             sizes: "any",
             type: "image/svg+xml",
             purpose: "any"

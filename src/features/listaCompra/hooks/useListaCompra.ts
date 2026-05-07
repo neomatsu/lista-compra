@@ -1,11 +1,25 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type ProductoCatalogo, type ProductoLista } from "../../../db/db";
-import { enqueueDelete, enqueueUpsert } from "../../../sync/syncService";
+import {
+  enqueueCatalogUpsert,
+  enqueueDelete,
+  enqueueUpsert
+} from "../../../sync/syncService";
+
+export type AddCatalogProductResult =
+  | { status: "created"; producto: ProductoCatalogo & { id: number } }
+  | { status: "exists"; producto: ProductoCatalogo & { id: number } }
+  | { status: "invalid-name" }
+  | { status: "invalid-category" };
 
 export function useListaCompra() {
   const categorias = useLiveQuery(() => db.categorias.orderBy("orden").toArray(), []);
   const productosCatalogo = useLiveQuery(
-    () => db.productosCatalogo.orderBy("nombre").toArray(),
+    () =>
+      db.productosCatalogo
+        .orderBy("nombre")
+        .filter((producto) => !producto.deleted)
+        .toArray(),
     []
   );
   const productosLista = useLiveQuery(
@@ -15,10 +29,15 @@ export function useListaCompra() {
 
   const addFromCatalog = async (producto: ProductoCatalogo) => {
     const now = Date.now();
-    const existing = await db.productosLista
+    const existingByCatalogId = await db.productosLista
       .where("productoCatalogoId")
       .equals(producto.id ?? -1)
       .first();
+    const existing =
+      existingByCatalogId ??
+      (await db.productosLista
+        .filter((item) => normalizeText(item.nombre) === normalizeText(producto.nombre))
+        .first());
 
     if (existing?.id && typeof existing.id === "number") {
       const updatedItem: ProductoLista = {
@@ -79,6 +98,48 @@ export function useListaCompra() {
     };
     const id = await db.productosLista.add(created);
     await enqueueUpsert({ ...created, id });
+  };
+
+  const addCatalogProduct = async (
+    nombre: string,
+    categoriaId: number
+  ): Promise<AddCatalogProductResult> => {
+    const cleanName = nombre.trim();
+    if (!cleanName) {
+      return { status: "invalid-name" };
+    }
+
+    const category = await db.categorias.get(categoriaId);
+    if (!category) {
+      return { status: "invalid-category" };
+    }
+
+    const normalized = normalizeText(cleanName);
+    const existing = await db.productosCatalogo
+      .filter(
+        (producto) =>
+          !producto.deleted &&
+          producto.categoriaId === categoriaId &&
+          normalizeText(producto.nombre) === normalized
+      )
+      .first();
+
+    if (existing?.id && typeof existing.id === "number") {
+      return { status: "exists", producto: { ...existing, id: existing.id } };
+    }
+
+    const now = Date.now();
+    const created: ProductoCatalogo = {
+      nombre: cleanName,
+      categoriaId,
+      origen: "usuario",
+      createdAt: now,
+      updatedAt: now
+    };
+    const id = await db.productosCatalogo.add(created);
+    const producto = { ...created, id };
+    await enqueueCatalogUpsert(producto);
+    return { status: "created", producto };
   };
 
   const toggleComprado = async (id: number, comprado: boolean) => {
@@ -153,10 +214,19 @@ export function useListaCompra() {
     productosLista,
     addFromCatalog,
     addCustomProduct,
+    addCatalogProduct,
     toggleComprado,
     changeCantidad,
     removeComprados,
     removeItemById,
     restoreDeletedItem
   };
+}
+
+function normalizeText(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }

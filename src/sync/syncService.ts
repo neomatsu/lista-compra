@@ -9,7 +9,13 @@ import {
 } from "firebase/firestore";
 import { signInAnonymously, type User } from "firebase/auth";
 import { auth, firestore, isFirebaseConfigured } from "../firebase/firebase";
-import { db, type OutboxEvent, type ProductoLista } from "../db/db";
+import {
+  db,
+  type CatalogOutboxEvent,
+  type OutboxEvent,
+  type ProductoCatalogo,
+  type ProductoLista
+} from "../db/db";
 
 const FAMILY_ID_KEY = "lista_compra_family_id";
 const DEVICE_ID_KEY = "lista_compra_device_id";
@@ -34,13 +40,24 @@ interface RemoteItemDoc {
   createdAt?: number;
 }
 
+interface RemoteCatalogItemDoc {
+  id: string;
+  name: string;
+  categoryId?: string;
+  updatedAt: number;
+  updatedBy: string;
+  deleted?: boolean;
+  createdAt?: number;
+}
+
 export interface StartSyncParams {
   familyId: string;
   uid: string;
   onStatus?: (event: SyncStatusEvent) => void;
 }
 
-let unsubscribeSnapshot: Unsubscribe | null = null;
+let unsubscribeItemsSnapshot: Unsubscribe | null = null;
+let unsubscribeCatalogSnapshot: Unsubscribe | null = null;
 let outboxIntervalId: number | null = null;
 let onlineListener: (() => void) | null = null;
 
@@ -122,14 +139,24 @@ export async function joinFamily(familyIdRaw: string, uid: string): Promise<stri
 export async function clearLocalDataForJoin(): Promise<void> {
   await db.transaction(
     "rw",
-    db.productosLista,
-    db.outbox,
-    db.syncMap,
-    db.configuracion,
+    [
+      db.productosLista,
+      db.productosCatalogo,
+      db.outbox,
+      db.syncMap,
+      db.catalogOutbox,
+      db.catalogSyncMap,
+      db.configuracion
+    ],
     async () => {
       await db.productosLista.clear();
       await db.outbox.clear();
       await db.syncMap.clear();
+      await db.catalogOutbox.clear();
+      await db.catalogSyncMap.clear();
+      await db.productosCatalogo
+        .filter((producto) => producto.origen === "usuario" || producto.origen === "familia")
+        .delete();
       await db.configuracion.put({ clave: "syncFamilyId", valor: "" });
     }
   );
@@ -175,6 +202,44 @@ export async function enqueueDelete(item: ProductoLista): Promise<void> {
   });
 }
 
+export async function enqueueCatalogUpsert(producto: ProductoCatalogo): Promise<void> {
+  if (!producto.id) {
+    return;
+  }
+  const now = Date.now();
+  const remoteId = await ensureRemoteCatalogIdForLocal(producto.id);
+  await db.catalogOutbox.add({
+    type: "upsert",
+    remoteId,
+    payload: {
+      nombre: producto.nombre,
+      categoriaId: producto.categoriaId,
+      createdAt: producto.createdAt ?? now,
+      updatedAt: producto.updatedAt ?? now
+    },
+    createdAt: now
+  });
+}
+
+export async function enqueueCatalogDelete(producto: ProductoCatalogo): Promise<void> {
+  if (!producto.id) {
+    return;
+  }
+  const now = Date.now();
+  const remoteId = await ensureRemoteCatalogIdForLocal(producto.id);
+  await db.catalogOutbox.add({
+    type: "delete",
+    remoteId,
+    payload: {
+      nombre: producto.nombre,
+      categoriaId: producto.categoriaId,
+      createdAt: producto.createdAt ?? now,
+      updatedAt: now
+    },
+    createdAt: now
+  });
+}
+
 export async function startSync({
   familyId,
   uid,
@@ -185,12 +250,14 @@ export async function startSync({
   }
   stopSync();
   console.debug("SYNC start", familyId);
-  const initialCount = await initialPull(familyId);
-  console.debug("SYNC initial pull count", initialCount);
+  const initialItemsCount = await initialPull(familyId);
+  const initialCatalogCount = await initialCatalogPull(familyId);
+  console.debug("SYNC initial pull count", initialItemsCount);
+  console.debug("SYNC catalog initial pull count", initialCatalogCount);
   await db.configuracion.put({ clave: "syncFamilyId", valor: familyId });
 
   const itemsRef = collection(firestore, "families", familyId, "items");
-  unsubscribeSnapshot = onSnapshot(
+  unsubscribeItemsSnapshot = onSnapshot(
     itemsRef,
     async (snapshot) => {
       try {
@@ -208,25 +275,54 @@ export async function startSync({
       onStatus?.({ type: "error", error: "Error de sincronización remota" });
     }
   );
+  const catalogRef = collection(firestore, "families", familyId, "catalogItems");
+  unsubscribeCatalogSnapshot = onSnapshot(
+    catalogRef,
+    async (snapshot) => {
+      try {
+        for (const change of snapshot.docChanges()) {
+          await applyRemoteCatalogChange(
+            change.doc.id,
+            change.doc.data() as Partial<RemoteCatalogItemDoc>
+          );
+        }
+        onStatus?.({ type: "synced", lastSyncAt: Date.now() });
+      } catch (error) {
+        console.error("Error aplicando cambios remotos de catálogo", error);
+        onStatus?.({ type: "error", error: "No se pudo actualizar el catálogo compartido" });
+      }
+    },
+    (error) => {
+      console.error("Error de suscripción Firestore catálogo", error);
+      onStatus?.({ type: "error", error: "Error de sincronización del catálogo" });
+    }
+  );
   console.debug("SYNC subscribe started");
 
   await processOutbox(familyId, uid, onStatus);
+  await processCatalogOutbox(familyId, uid, onStatus);
   console.debug("SYNC outbox resumed");
 
   outboxIntervalId = window.setInterval(() => {
     void processOutbox(familyId, uid, onStatus);
+    void processCatalogOutbox(familyId, uid, onStatus);
   }, OUTBOX_INTERVAL_MS);
 
   onlineListener = () => {
     void processOutbox(familyId, uid, onStatus);
+    void processCatalogOutbox(familyId, uid, onStatus);
   };
   window.addEventListener("online", onlineListener);
 }
 
 export function stopSync(): void {
-  if (unsubscribeSnapshot) {
-    unsubscribeSnapshot();
-    unsubscribeSnapshot = null;
+  if (unsubscribeItemsSnapshot) {
+    unsubscribeItemsSnapshot();
+    unsubscribeItemsSnapshot = null;
+  }
+  if (unsubscribeCatalogSnapshot) {
+    unsubscribeCatalogSnapshot();
+    unsubscribeCatalogSnapshot = null;
   }
   if (outboxIntervalId) {
     window.clearInterval(outboxIntervalId);
@@ -264,6 +360,32 @@ async function processOutbox(
   }
 }
 
+async function processCatalogOutbox(
+  familyId: string,
+  uid: string,
+  onStatus?: (event: SyncStatusEvent) => void
+): Promise<void> {
+  const events = await db.catalogOutbox.orderBy("createdAt").toArray();
+  if (!events.length) {
+    return;
+  }
+
+  for (const event of events) {
+    if (!event.id) {
+      continue;
+    }
+    try {
+      await pushCatalogEventToFirestore(familyId, uid, event);
+      await db.catalogOutbox.delete(event.id);
+      onStatus?.({ type: "synced", lastSyncAt: Date.now() });
+    } catch (error) {
+      console.warn("No se pudo sincronizar evento de catálogo", error);
+      onStatus?.({ type: "error", error: "Sin conexión para sincronizar catálogo" });
+      break;
+    }
+  }
+}
+
 async function initialPull(familyId: string): Promise<number> {
   if (!firestore) {
     throw new Error("Firestore no configurado");
@@ -271,6 +393,20 @@ async function initialPull(familyId: string): Promise<number> {
   const snapshot = await getDocs(collection(firestore, "families", familyId, "items"));
   for (const docSnap of snapshot.docs) {
     await applyRemoteChange(docSnap.id, docSnap.data() as Partial<RemoteItemDoc>);
+  }
+  return snapshot.size;
+}
+
+async function initialCatalogPull(familyId: string): Promise<number> {
+  if (!firestore) {
+    throw new Error("Firestore no configurado");
+  }
+  const snapshot = await getDocs(collection(firestore, "families", familyId, "catalogItems"));
+  for (const docSnap of snapshot.docs) {
+    await applyRemoteCatalogChange(
+      docSnap.id,
+      docSnap.data() as Partial<RemoteCatalogItemDoc>
+    );
   }
   return snapshot.size;
 }
@@ -319,6 +455,46 @@ async function pushEventToFirestore(
   );
 }
 
+async function pushCatalogEventToFirestore(
+  familyId: string,
+  uid: string,
+  event: CatalogOutboxEvent
+): Promise<void> {
+  if (!firestore) {
+    throw new Error("Firestore no configurado");
+  }
+  const itemRef = doc(firestore, "families", familyId, "catalogItems", event.remoteId);
+  if (event.type === "delete") {
+    await setDoc(
+      itemRef,
+      {
+        id: event.remoteId,
+        name: event.payload.nombre,
+        categoryId: String(event.payload.categoriaId),
+        updatedAt: event.payload.updatedAt,
+        updatedBy: uid,
+        deleted: true
+      },
+      { merge: true }
+    );
+    return;
+  }
+
+  await setDoc(
+    itemRef,
+    {
+      id: event.remoteId,
+      name: event.payload.nombre,
+      categoryId: String(event.payload.categoriaId),
+      createdAt: event.payload.createdAt,
+      updatedAt: event.payload.updatedAt,
+      updatedBy: uid,
+      deleted: false
+    },
+    { merge: true }
+  );
+}
+
 async function applyRemoteChange(remoteId: string, raw: Partial<RemoteItemDoc>): Promise<void> {
   const remoteUpdatedAt = toMillis(raw.updatedAt);
   if (!remoteUpdatedAt) {
@@ -358,6 +534,67 @@ async function applyRemoteChange(remoteId: string, raw: Partial<RemoteItemDoc>):
   });
 }
 
+async function applyRemoteCatalogChange(
+  remoteId: string,
+  raw: Partial<RemoteCatalogItemDoc>
+): Promise<void> {
+  const remoteUpdatedAt = toMillis(raw.updatedAt);
+  if (!remoteUpdatedAt) {
+    return;
+  }
+
+  await db.transaction("rw", db.productosCatalogo, db.catalogSyncMap, async () => {
+    const map = await db.catalogSyncMap.get(remoteId);
+
+    if (raw.deleted) {
+      if (map) {
+        const local = await db.productosCatalogo.get(map.localId);
+        if (local?.origen === "usuario" || local?.origen === "familia") {
+          await db.productosCatalogo.delete(map.localId);
+        }
+        await db.catalogSyncMap.delete(remoteId);
+      }
+      return;
+    }
+
+    const mappedItem = toLocalCatalogItem(remoteId, raw, remoteUpdatedAt);
+    if (!mappedItem) {
+      return;
+    }
+
+    if (map) {
+      const local = await db.productosCatalogo.get(map.localId);
+      if (local && (local.updatedAt ?? 0) > remoteUpdatedAt) {
+        return;
+      }
+      await db.productosCatalogo.put({
+        ...mappedItem,
+        id: map.localId
+      });
+      return;
+    }
+
+    const existing = await findEquivalentCatalogProduct(
+      mappedItem.nombre,
+      mappedItem.categoriaId
+    );
+    if (existing?.id && typeof existing.id === "number") {
+      if (existing.origen === "usuario" || existing.origen === "familia") {
+        await db.productosCatalogo.put({
+          ...existing,
+          ...mappedItem,
+          id: existing.id
+        });
+        await db.catalogSyncMap.put({ remoteId, localId: existing.id });
+      }
+      return;
+    }
+
+    const createdId = await db.productosCatalogo.add(mappedItem);
+    await db.catalogSyncMap.put({ remoteId, localId: createdId });
+  });
+}
+
 function toLocalItem(raw: Partial<RemoteItemDoc>, updatedAt: number): ProductoLista | null {
   if (!raw.name || typeof raw.quantity !== "number" || typeof raw.checked !== "boolean") {
     return null;
@@ -372,6 +609,43 @@ function toLocalItem(raw: Partial<RemoteItemDoc>, updatedAt: number): ProductoLi
     createdAt: toMillis(raw.createdAt) ?? updatedAt,
     updatedAt
   };
+}
+
+function toLocalCatalogItem(
+  remoteId: string,
+  raw: Partial<RemoteCatalogItemDoc>,
+  updatedAt: number
+): ProductoCatalogo | null {
+  if (!raw.name || !raw.categoryId) {
+    return null;
+  }
+
+  const categoryId = Number(raw.categoryId);
+  if (!Number.isFinite(categoryId)) {
+    return null;
+  }
+
+  return {
+    nombre: raw.name,
+    categoriaId: categoryId,
+    origen: "familia",
+    remoteId,
+    deleted: false,
+    createdAt: toMillis(raw.createdAt) ?? updatedAt,
+    updatedAt
+  };
+}
+
+async function findEquivalentCatalogProduct(nombre: string, categoriaId: number) {
+  const normalized = normalizeText(nombre);
+  return db.productosCatalogo
+    .filter(
+      (producto) =>
+        !producto.deleted &&
+        producto.categoriaId === categoriaId &&
+        normalizeText(producto.nombre) === normalized
+    )
+    .first();
 }
 
 function toMillis(value: unknown): number | null {
@@ -402,4 +676,30 @@ async function ensureRemoteIdForLocal(localId: number): Promise<string> {
   const remoteId = `${getDeviceId()}_${localId}`;
   await db.syncMap.put({ remoteId, localId });
   return remoteId;
+}
+
+async function ensureRemoteCatalogIdForLocal(localId: number): Promise<string> {
+  const existing = await db.catalogSyncMap.where("localId").equals(localId).first();
+  if (existing) {
+    return existing.remoteId;
+  }
+
+  const producto = await db.productosCatalogo.get(localId);
+  if (producto?.remoteId) {
+    await db.catalogSyncMap.put({ remoteId: producto.remoteId, localId });
+    return producto.remoteId;
+  }
+
+  const remoteId = `${getDeviceId()}_catalog_${localId}`;
+  await db.catalogSyncMap.put({ remoteId, localId });
+  await db.productosCatalogo.update(localId, { remoteId });
+  return remoteId;
+}
+
+function normalizeText(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 }

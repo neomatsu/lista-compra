@@ -29,6 +29,13 @@ npm run build
 npm run preview
 ```
 
+Pruebas E2E:
+
+```bash
+npm run build
+npm run test:e2e
+```
+
 ## Variables de entorno
 
 Crea `.env.local` a partir de `.env.example`:
@@ -79,6 +86,10 @@ service cloud.firestore {
       match /items/{itemId} {
         allow read, write: if isSignedIn() && isMember(familyId);
       }
+
+      match /catalogItems/{catalogItemId} {
+        allow read, write: if isSignedIn() && isMember(familyId);
+      }
     }
   }
 }
@@ -95,10 +106,16 @@ Detalles:
 
 - La UI siempre lee/escribe Dexie.
 - Cada cambio local en `productosLista` encola evento en `outbox` (`upsert` o `delete`).
+- Cada producto nuevo del catálogo encola evento en `catalogOutbox`.
 - Un loop de sync procesa outbox y escribe en Firestore.
-- `onSnapshot` trae cambios remotos y los aplica a Dexie.
+- `onSnapshot` trae cambios remotos de lista y catálogo y los aplica a Dexie.
 - Conflictos: `last-write-wins` por `updatedAt`.
 - Borrados remotos: tombstone (`deleted=true`) para evitar reapariciones.
+
+Colecciones Firestore:
+
+- `families/{familyId}/items`: productos de la lista compartida.
+- `families/{familyId}/catalogItems`: productos personalizados del catálogo familiar.
 
 ## Código de familia
 
@@ -158,3 +175,4 @@ src/
 - La app sigue siendo offline-first: Dexie es la fuente de verdad local.
 - Firestore añade sincronización entre dispositivos cuando hay red.
 - Firestore offline persistence se intenta habilitar automáticamente (con fallback por consola si no se puede).
+- Arquitectura de datos detallada: `docs/arquitectura-datos.md`.
