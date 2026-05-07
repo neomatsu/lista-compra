@@ -44,6 +44,7 @@ interface RemoteCatalogItemDoc {
   id: string;
   name: string;
   categoryId?: string;
+  favorite?: boolean;
   updatedAt: number;
   updatedBy: string;
   deleted?: boolean;
@@ -214,6 +215,7 @@ export async function enqueueCatalogUpsert(producto: ProductoCatalogo): Promise<
     payload: {
       nombre: producto.nombre,
       categoriaId: producto.categoriaId,
+      favorito: producto.favorito,
       createdAt: producto.createdAt ?? now,
       updatedAt: producto.updatedAt ?? now
     },
@@ -233,6 +235,7 @@ export async function enqueueCatalogDelete(producto: ProductoCatalogo): Promise<
     payload: {
       nombre: producto.nombre,
       categoriaId: producto.categoriaId,
+      favorito: producto.favorito,
       createdAt: producto.createdAt ?? now,
       updatedAt: now
     },
@@ -471,6 +474,7 @@ async function pushCatalogEventToFirestore(
         id: event.remoteId,
         name: event.payload.nombre,
         categoryId: String(event.payload.categoriaId),
+        favorite: event.payload.favorito ?? false,
         updatedAt: event.payload.updatedAt,
         updatedBy: uid,
         deleted: true
@@ -486,6 +490,7 @@ async function pushCatalogEventToFirestore(
       id: event.remoteId,
       name: event.payload.nombre,
       categoryId: String(event.payload.categoriaId),
+      favorite: event.payload.favorito ?? false,
       createdAt: event.payload.createdAt,
       updatedAt: event.payload.updatedAt,
       updatedBy: uid,
@@ -551,6 +556,11 @@ async function applyRemoteCatalogChange(
         const local = await db.productosCatalogo.get(map.localId);
         if (local?.origen === "usuario" || local?.origen === "familia") {
           await db.productosCatalogo.delete(map.localId);
+        } else if (local?.origen === "seed") {
+          await db.productosCatalogo.update(map.localId, {
+            favorito: false,
+            updatedAt: remoteUpdatedAt
+          });
         }
         await db.catalogSyncMap.delete(remoteId);
       }
@@ -568,7 +578,9 @@ async function applyRemoteCatalogChange(
         return;
       }
       await db.productosCatalogo.put({
+        ...local,
         ...mappedItem,
+        origen: local?.origen ?? mappedItem.origen,
         id: map.localId
       });
       return;
@@ -579,14 +591,13 @@ async function applyRemoteCatalogChange(
       mappedItem.categoriaId
     );
     if (existing?.id && typeof existing.id === "number") {
-      if (existing.origen === "usuario" || existing.origen === "familia") {
-        await db.productosCatalogo.put({
-          ...existing,
-          ...mappedItem,
-          id: existing.id
-        });
-        await db.catalogSyncMap.put({ remoteId, localId: existing.id });
-      }
+      await db.productosCatalogo.put({
+        ...existing,
+        ...mappedItem,
+        origen: existing.origen ?? mappedItem.origen,
+        id: existing.id
+      });
+      await db.catalogSyncMap.put({ remoteId, localId: existing.id });
       return;
     }
 
@@ -631,6 +642,7 @@ function toLocalCatalogItem(
     origen: "familia",
     remoteId,
     deleted: false,
+    favorito: raw.favorite ?? false,
     createdAt: toMillis(raw.createdAt) ?? updatedAt,
     updatedAt
   };

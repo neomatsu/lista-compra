@@ -1,6 +1,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, type ProductoCatalogo, type ProductoLista } from "../../../db/db";
 import {
+  enqueueCatalogDelete,
   enqueueCatalogUpsert,
   enqueueDelete,
   enqueueUpsert
@@ -133,6 +134,7 @@ export function useListaCompra() {
       nombre: cleanName,
       categoriaId,
       origen: "usuario",
+      favorito: false,
       createdAt: now,
       updatedAt: now
     };
@@ -140,6 +142,33 @@ export function useListaCompra() {
     const producto = { ...created, id };
     await enqueueCatalogUpsert(producto);
     return { status: "created", producto };
+  };
+
+  const toggleCatalogFavorite = async (producto: ProductoCatalogo) => {
+    if (!producto.id) {
+      return;
+    }
+    const updated: ProductoCatalogo = {
+      ...producto,
+      favorito: !isCatalogFavorite(producto),
+      updatedAt: Date.now()
+    };
+    await db.productosCatalogo.put({ ...updated, id: producto.id });
+    await enqueueCatalogUpsert({ ...updated, id: producto.id });
+  };
+
+  const deleteCatalogProduct = async (producto: ProductoCatalogo) => {
+    if (!producto.id || producto.origen === "seed") {
+      return false;
+    }
+    const updated: ProductoCatalogo = {
+      ...producto,
+      deleted: true,
+      updatedAt: Date.now()
+    };
+    await db.productosCatalogo.delete(producto.id);
+    await enqueueCatalogDelete({ ...updated, id: producto.id });
+    return true;
   };
 
   const toggleComprado = async (id: number, comprado: boolean) => {
@@ -215,12 +244,19 @@ export function useListaCompra() {
     addFromCatalog,
     addCustomProduct,
     addCatalogProduct,
+    toggleCatalogFavorite,
+    deleteCatalogProduct,
     toggleComprado,
     changeCantidad,
     removeComprados,
     removeItemById,
     restoreDeletedItem
   };
+}
+
+function isCatalogFavorite(producto: ProductoCatalogo) {
+  const defaultFavorites = ["Pan", "Leche", "Huevos", "Agua", "Papel higiénico", "Café"];
+  return producto.favorito ?? defaultFavorites.includes(producto.nombre);
 }
 
 function normalizeText(value: string) {

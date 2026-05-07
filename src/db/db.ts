@@ -13,6 +13,7 @@ export interface ProductoCatalogo {
   origen?: "seed" | "usuario" | "familia";
   remoteId?: string;
   deleted?: boolean;
+  favorito?: boolean;
   createdAt?: number;
   updatedAt?: number;
 }
@@ -63,6 +64,7 @@ export interface CatalogOutboxEvent {
   payload: {
     nombre: string;
     categoriaId: number;
+    favorito?: boolean;
     createdAt: number;
     updatedAt: number;
   };

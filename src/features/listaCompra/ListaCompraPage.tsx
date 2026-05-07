@@ -41,6 +41,8 @@ export function ListaCompraPage() {
     productosLista,
     addFromCatalog,
     addCatalogProduct,
+    toggleCatalogFavorite,
+    deleteCatalogProduct,
     toggleComprado,
     changeCantidad,
     removeComprados,
@@ -326,6 +328,15 @@ export function ListaCompraPage() {
         onAddCatalogo={(producto) => {
           void addFromCatalog(producto);
           pushToast(`${producto.nombre} añadido`);
+        }}
+        onToggleFavorito={(producto) => {
+          void toggleCatalogFavorite(producto);
+          const isFavorite = producto.favorito ?? ["Pan", "Leche", "Huevos", "Agua", "Papel higiénico", "Café"].includes(producto.nombre);
+          pushToast(isFavorite ? `${producto.nombre} quitado de favoritos` : `${producto.nombre} añadido a favoritos`);
+        }}
+        onDeleteCatalogo={async (producto) => {
+          const deleted = await deleteCatalogProduct(producto);
+          pushToast(deleted ? `${producto.nombre} eliminado del catálogo` : "No se puede eliminar este producto");
         }}
         onCreateCatalogo={async (nombre, categoriaId, addToList) => {
           const result = await addCatalogProduct(nombre, categoriaId);

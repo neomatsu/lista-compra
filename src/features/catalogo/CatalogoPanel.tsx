@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "../../components/Button";
 import { Card } from "../../components/Card";
+import { ConfirmDialog } from "../../components/ConfirmDialog";
 import {
   ChevronRightIcon,
   CloseIcon,
   PlusIcon,
   SearchIcon,
-  StarIcon
+  StarIcon,
+  TrashIcon
 } from "../../components/Icons";
 import type { Categoria, ProductoCatalogo } from "../../db/db";
 
@@ -16,6 +18,8 @@ interface CatalogoPanelProps {
   productos: ProductoCatalogo[];
   onClose: () => void;
   onAddCatalogo: (producto: ProductoCatalogo) => void;
+  onToggleFavorito: (producto: ProductoCatalogo) => void;
+  onDeleteCatalogo: (producto: ProductoCatalogo) => Promise<void>;
   onCreateCatalogo: (
     nombre: string,
     categoriaId: number,
@@ -31,12 +35,15 @@ export function CatalogoPanel({
   productos,
   onClose,
   onAddCatalogo,
+  onToggleFavorito,
+  onDeleteCatalogo,
   onCreateCatalogo
 }: CatalogoPanelProps) {
   const [query, setQuery] = useState("");
   const [newProductName, setNewProductName] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [expanded, setExpanded] = useState<Record<number, boolean>>({});
+  const [deleteTarget, setDeleteTarget] = useState<ProductoCatalogo | null>(null);
 
   const filtered = useMemo(() => {
     const q = normalize(query.trim());
@@ -47,7 +54,7 @@ export function CatalogoPanel({
   }, [productos, query]);
 
   const habituales = useMemo(
-    () => filtered.filter((producto) => HABITUALES.includes(producto.nombre)),
+    () => filtered.filter((producto) => isFavorite(producto)),
     [filtered]
   );
 
@@ -123,14 +130,14 @@ export function CatalogoPanel({
               </div>
               <div className="flex flex-wrap gap-2">
                 {habituales.map((producto) => (
-                  <button
+                  <CatalogProductChip
                     key={`habitual-${producto.id}`}
-                    className="inline-flex min-h-11 items-center gap-1 rounded-[var(--r-pill)] border border-[#E6CF8E] bg-[#FFFDF5] px-4 text-base font-bold text-[#5C4514]"
-                    onClick={() => onAddCatalogo(producto)}
-                    aria-label={`Añadir ${producto.nombre}`}
-                  >
-                    <PlusIcon size={18} /> {producto.nombre}
-                  </button>
+                    producto={producto}
+                    onAdd={onAddCatalogo}
+                    onToggleFavorite={onToggleFavorito}
+                    onDelete={setDeleteTarget}
+                    compact
+                  />
                 ))}
               </div>
             </Card>
@@ -140,7 +147,7 @@ export function CatalogoPanel({
             {categorias.map((categoria) => {
               const id = categoria.id ?? -1;
               const catProducts = filtered.filter(
-                (p) => p.categoriaId === id && !HABITUALES.includes(p.nombre)
+                (p) => p.categoriaId === id && !isFavorite(p)
               );
               if (!catProducts.length) {
                 return null;
@@ -168,15 +175,13 @@ export function CatalogoPanel({
                   {openCat ? (
                     <div className="grid grid-cols-1 gap-2 border-t border-[var(--surface-line)] p-3 sm:grid-cols-2">
                       {catProducts.map((producto) => (
-                        <button
+                        <CatalogProductChip
                           key={producto.id}
-                          className="flex min-h-12 items-center gap-2 rounded-[var(--r-md)] bg-[var(--surface-2)] px-4 text-left text-base font-bold text-[var(--ink)]"
-                          onClick={() => onAddCatalogo(producto)}
-                          aria-label={`Añadir ${producto.nombre}`}
-                        >
-                          <PlusIcon size={18} className="text-[var(--green-600)]" />
-                          {producto.nombre}
-                        </button>
+                          producto={producto}
+                          onAdd={onAddCatalogo}
+                          onToggleFavorite={onToggleFavorito}
+                          onDelete={setDeleteTarget}
+                        />
                       ))}
                     </div>
                   ) : null}
@@ -234,8 +239,81 @@ export function CatalogoPanel({
           </Card>
         </div>
       </div>
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Eliminar producto"
+        message={`Se eliminará "${deleteTarget?.nombre ?? ""}" del catálogo familiar.`}
+        confirmLabel="Sí, eliminar"
+        danger
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (!deleteTarget) {
+            return;
+          }
+          const producto = deleteTarget;
+          setDeleteTarget(null);
+          void onDeleteCatalogo(producto);
+        }}
+      />
     </div>
   );
+}
+
+function CatalogProductChip({
+  producto,
+  onAdd,
+  onToggleFavorite,
+  onDelete,
+  compact = false
+}: {
+  producto: ProductoCatalogo;
+  onAdd: (producto: ProductoCatalogo) => void;
+  onToggleFavorite: (producto: ProductoCatalogo) => void;
+  onDelete: (producto: ProductoCatalogo) => void;
+  compact?: boolean;
+}) {
+  const favorite = isFavorite(producto);
+  const canDelete = producto.origen === "usuario" || producto.origen === "familia";
+  return (
+    <div
+      className={`flex min-h-12 items-center gap-1 rounded-[var(--r-md)] border border-[var(--surface-line)] bg-[var(--surface)] p-1 ${
+        compact ? "max-w-full" : ""
+      }`}
+    >
+      <button
+        className="flex min-h-10 min-w-0 flex-1 items-center gap-2 rounded-[10px] px-3 text-left text-base font-bold text-[var(--ink)] hover:bg-[var(--surface-2)]"
+        onClick={() => onAdd(producto)}
+        aria-label={`Añadir ${producto.nombre}`}
+      >
+        <PlusIcon size={18} className="shrink-0 text-[var(--green-600)]" />
+        <span className="truncate">{producto.nombre}</span>
+      </button>
+      <button
+        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] ${
+          favorite ? "bg-[var(--amber-50)] text-[var(--amber-500)]" : "text-[var(--ink-3)]"
+        }`}
+        onClick={() => onToggleFavorite(producto)}
+        aria-label={favorite ? `Quitar ${producto.nombre} de favoritos` : `Añadir ${producto.nombre} a favoritos`}
+        title={favorite ? "Quitar de favoritos" : "Añadir a favoritos"}
+      >
+        <StarIcon size={20} />
+      </button>
+      {canDelete ? (
+        <button
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] text-[var(--danger-600)] hover:bg-[var(--danger-50)]"
+          onClick={() => onDelete(producto)}
+          aria-label={`Eliminar ${producto.nombre} del catálogo`}
+          title="Eliminar del catálogo"
+        >
+          <TrashIcon size={19} />
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
+function isFavorite(producto: ProductoCatalogo) {
+  return producto.favorito ?? HABITUALES.includes(producto.nombre);
 }
 
 function CategoryBadge({ name }: { name: string }) {

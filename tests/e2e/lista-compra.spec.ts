@@ -57,7 +57,15 @@ test("crear producto de catalogo con categoria", async ({ page }) => {
 
   await page.getByRole("button", { name: "Catálogo", exact: true }).click();
   await page.getByRole("searchbox", { name: "Buscar producto" }).fill("galletas e2e");
-  await expect(page.getByRole("button", { name: "Añadir Galletas e2e" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Añadir Galletas e2e", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Añadir Galletas e2e a favoritos" }).click();
+  await page.getByRole("searchbox", { name: "Buscar producto" }).fill("");
+  await expect(page.getByRole("button", { name: "Quitar Galletas e2e de favoritos" })).toBeVisible();
+  await page.getByRole("button", { name: "Eliminar Galletas e2e del catálogo" }).click();
+  await expect(page.getByRole("dialog", { name: "Eliminar producto" })).toBeVisible();
+  await page.getByRole("button", { name: "Sí, eliminar" }).click();
+  await page.getByRole("searchbox", { name: "Buscar producto" }).fill("galletas e2e");
+  await expect(page.getByRole("button", { name: "Añadir Galletas e2e", exact: true })).toHaveCount(0);
 });
 
 test("modo compra y modal de eliminacion", async ({ page }) => {
