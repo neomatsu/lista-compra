@@ -1,4 +1,3 @@
-import { Button } from "../../../components/Button";
 import { Card } from "../../../components/Card";
 import { CheckIcon, MinusIcon, PlusIcon } from "../../../components/Icons";
 import type { Categoria, ProductoLista } from "../../../db/db";
@@ -106,34 +105,34 @@ export function ListaSection({
                     <div className="flex shrink-0 items-center gap-2">
                       {showQuantityControls ? (
                         <>
-                          <Button
-                            variant="primary"
-                            className="h-12 w-12 min-h-12 rounded-xl px-0"
+                          <button
+                            type="button"
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--green-500)] text-white shadow-sm transition active:scale-[0.98]"
                             onClick={(event) => {
                               event.stopPropagation();
                               item.id && onCantidad(item.id, item.cantidad, -1);
                             }}
                             aria-label={`Reducir cantidad de ${item.nombre}`}
                           >
-                            <MinusIcon size={22} />
-                          </Button>
+                            <MinusIcon size={24} strokeWidth={2.8} />
+                          </button>
                           <span
-                            className="min-w-10 text-center text-2xl font-extrabold text-[var(--ink)]"
+                            className="min-w-9 text-center text-2xl font-black text-[var(--ink)]"
                             aria-live="polite"
                           >
                             {item.cantidad}
                           </span>
-                          <Button
-                            variant="primary"
-                            className="h-12 w-12 min-h-12 rounded-xl px-0"
+                          <button
+                            type="button"
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--green-500)] text-white shadow-sm transition active:scale-[0.98]"
                             onClick={(event) => {
                               event.stopPropagation();
                               item.id && onCantidad(item.id, item.cantidad, +1);
                             }}
                             aria-label={`Aumentar cantidad de ${item.nombre}`}
                           >
-                            <PlusIcon size={22} />
-                          </Button>
+                            <PlusIcon size={24} strokeWidth={2.8} />
+                          </button>
                         </>
                       ) : (
                         <span
