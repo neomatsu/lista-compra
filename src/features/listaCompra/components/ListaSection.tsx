@@ -60,7 +60,7 @@ export function ListaSection({
                       ? "border-[var(--surface-line)] bg-[var(--status-bought-bg)]"
                       : purchaseMode
                         ? "border-[var(--green-100)] bg-[var(--surface)]"
-                        : "border-transparent bg-[var(--surface-2)]"
+                        : "border-[#D9CDB6] bg-white"
                   }`}
                 >
                   <div className="flex items-center gap-3">
